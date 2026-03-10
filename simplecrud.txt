@@ -1,0 +1,197 @@
+CREATE TABLE Users
+(
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Username NVARCHAR(100) NOT NULL,
+    Age INT NOT NULL,
+    Gender NVARCHAR(10) NOT NULL,
+    Country NVARCHAR(50) NOT NULL
+);
+
+
+
+
+
+
+
+
+public class User
+{
+    public int Id { get; set; }
+    public string Username { get; set; }
+    public int Age { get; set; }
+    public string Gender { get; set; }
+    public string Country { get; set; }
+}
+
+
+
+
+
+
+
+
+
+using System.Data.Entity;
+
+public class ApplicationDbContext : DbContext
+{
+    public ApplicationDbContext() : base("DefaultConnection") { }
+    public DbSet<User> Users { get; set; }
+}
+
+
+
+
+<connectionStrings>
+    <add name="DefaultConnection" connectionString="Data Source=YOUR_SERVER_NAME;Initial Catalog=YourDBName;Integrated Security=True" providerName="System.Data.SqlClient"/>
+</connectionStrings>
+
+
+
+using System.Linq;
+using System.Web.Mvc;
+using YourNamespace.Models;
+
+public class UserController : Controller
+{
+    private ApplicationDbContext db = new ApplicationDbContext();
+
+    // GET: Show form and table
+    public ActionResult Index()
+    {
+        var users = db.Users.OrderBy(u => u.Id).ToList();
+        return View(users);
+    }
+
+    // POST: Create or Update
+    [HttpPost]
+    public ActionResult Save(User model)
+    {
+        if(model.Id == 0)
+        {
+            db.Users.Add(model); // Create
+        }
+        else
+        {
+            db.Entry(model).State = System.Data.Entity.EntityState.Modified; // Update
+        }
+        db.SaveChanges();
+        return RedirectToAction("Index");
+    }
+
+    // GET: Delete
+    public ActionResult Delete(int id)
+    {
+        var user = db.Users.Find(id);
+        if(user != null)
+        {
+            db.Users.Remove(user);
+            db.SaveChanges();
+        }
+        return RedirectToAction("Index");
+    }
+
+    // GET: Get user by id (for editing)
+    public JsonResult GetUser(int id)
+    {
+        var user = db.Users.Find(id);
+        return Json(user, JsonRequestBehavior.AllowGet);
+    }
+}
+
+
+
+
+@model List<YourNamespace.Models.User>
+@{
+    ViewBag.Title = "User CRUD with Filter";
+}
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+
+<div class="container mt-4">
+    <h2>User Form</h2>
+    <form id="userForm" method="post" action="@Url.Action("Save","User")">
+        @Html.Hidden("Id")
+        <div class="mb-2">
+            Username: <input type="text" name="Username" id="username" class="form-control" />
+        </div>
+        <div class="mb-2">
+            Age: <input type="text" name="Age" id="age" class="form-control" />
+        </div>
+        <div class="mb-2">
+            Gender:
+            <input type="radio" name="Gender" value="Male" /> Male
+            <input type="radio" name="Gender" value="Female" /> Female
+        </div>
+        <div class="mb-2">
+            Country:
+            <select name="Country" class="form-control">
+                <option value="">Select</option>
+                <option value="India">India</option>
+                <option value="USA">USA</option>
+                <option value="UK">UK</option>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-primary">Save</button>
+    </form>
+
+    <hr/>
+
+    <h3>User Table</h3>
+    <input type="text" id="search" class="form-control mb-2" placeholder="Search by Username..." />
+
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>S.No</th>
+                <th>Username</th>
+                <th>Age</th>
+                <th>Gender</th>
+                <th>Country</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="userTable">
+            @for(int i=0; i<Model.Count; i++)
+            {
+                <tr>
+                    <td>@(i+1)</td>
+                    <td>@Model[i].Username</td>
+                    <td>@Model[i].Age</td>
+                    <td>@Model[i].Gender</td>
+                    <td>@Model[i].Country</td>
+                    <td>
+                        <button class="btn btn-sm btn-info editBtn" data-id="@Model[i].Id">Edit</button>
+                        <a href="@Url.Action("Delete","User", new { id = Model[i].Id })" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<script>
+$(document).ready(function(){
+    // Edit button
+    $('.editBtn').click(function(){
+        var id = $(this).data('id');
+        $.get('@Url.Action("GetUser","User")', { id: id }, function(data){
+            $('input[name="Id"]').val(data.Id);
+            $('input[name="Username"]').val(data.Username);
+            $('input[name="Age"]').val(data.Age);
+            $('input[name="Gender"][value="'+data.Gender+'"]').prop('checked', true);
+            $('select[name="Country"]').val(data.Country);
+        });
+    });
+
+    // Filter table
+    $('#search').on('keyup', function(){
+        var val = $(this).val().toLowerCase();
+        $('#userTable tr').filter(function(){
+            $(this).toggle($(this).find('td:eq(1)').text().toLowerCase().indexOf(val) > -1)
+        });
+    });
+});
+</script>
