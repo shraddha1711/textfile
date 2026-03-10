@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Form with Validation and Serial No</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        table, th, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            padding: 5px;
+        }
+
+        th, td {
+            text-align: center;
+        }
+
+        input, select {
+            margin: 5px;
+        }
+
+        .error {
+            color: red;
+            font-size: 12px;
+            display: block;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>User Form</h2>
+    <form id="userForm">
+        Username: <input type="text" id="username" required />
+        <span class="error" id="usernameError"></span><br>
+
+        Age: <input type="text" id="age" required />
+        <span class="error" id="ageError"></span><br>
+
+        Gender:
+        <input type="radio" name="gender" value="Male" required /> Male
+        <input type="radio" name="gender" value="Female" required /> Female
+        <span class="error" id="genderError"></span><br>
+
+        Country:
+        <select id="country" required>
+            <option value="">Select</option>
+            <option value="India">India</option>
+            <option value="USA">USA</option>
+            <option value="UK">UK</option>
+        </select>
+        <span class="error" id="countryError"></span><br>
+
+        Profile Image: <input type="file" id="profileImage" accept="image/*" /><br>
+
+        <button type="button" id="addBtn">Add</button>
+    </form>
+
+    <h2>Users Table</h2>
+    <table id="userTable">
+        <thead>
+            <tr>
+                <th>S.No</th>
+                <th>Username</th>
+                <th>Age</th>
+                <th>Gender</th>
+                <th>Country</th>
+                <th>Image</th>
+                <th>Final Submit</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+
+    <script>
+        $(document).ready(function () {
+            let users = [];
+            let editIndex = -1;
+
+            // Live validation for username (only letters)
+            $('#username').on('input', function () {
+                const username = $(this).val();
+                if (!/^[A-Za-z ]*$/.test(username)) {
+                    $('#usernameError').text("Only letters allowed");
+                } else {
+                    $('#usernameError').text("");
+                }
+            });
+
+            // Live validation for age (only numbers)
+            $('#age').on('input', function () {
+                const age = $(this).val();
+                if (!/^\d*$/.test(age)) {
+                    $('#ageError').text("Only numbers allowed");
+                } else {
+                    $('#ageError').text("");
+                }
+            });
+
+            function validateForm() {
+                let isValid = true;
+
+                if ($('#username').val() === "" || !/^[A-Za-z ]+$/.test($('#username').val())) {
+                    $('#usernameError').text("Enter valid username");
+                    isValid = false;
+                } else {
+                    $('#usernameError').text("");
+                }
+
+                if ($('#age').val() === "" || !/^\d+$/.test($('#age').val())) {
+                    $('#ageError').text("Enter valid age");
+                    isValid = false;
+                } else {
+                    $('#ageError').text("");
+                }
+
+                if (!$('input[name="gender"]:checked').val()) {
+                    $('#genderError').text("Select gender");
+                    isValid = false;
+                } else {
+                    $('#genderError').text("");
+                }
+
+                if ($('#country').val() === "") {
+                    $('#countryError').text("Select country");
+                    isValid = false;
+                } else {
+                    $('#countryError').text("");
+                }
+
+                return isValid;
+            }
+
+            // Add / Update button
+            $('#addBtn').click(function () {
+                if (!validateForm()) return;
+
+                const username = $('#username').val();
+                const age = $('#age').val();
+                const gender = $('input[name="gender"]:checked').val();
+                const country = $('#country').val();
+                const file = $('#profileImage')[0].files[0];
+                let imageUrl = '';
+
+                if (file) {
+                    imageUrl = URL.createObjectURL(file);
+                }
+
+                if (editIndex >= 0) {
+                    users[editIndex] = { username, age, gender, country, imageUrl, finalSubmit: false };
+                    editIndex = -1;
+                } else {
+                    users.push({ username, age, gender, country, imageUrl, finalSubmit: false });
+                }
+
+                $('#userForm')[0].reset();
+                renderTable();
+            });
+
+            function renderTable() {
+                const tbody = $('#userTable tbody');
+                tbody.empty();
+                users.forEach((user, index) => {
+                    const row = `<tr>
+                    <td>${index + 1}</td>
+                    <td>${user.username}</td>
+                    <td>${user.age}</td>
+                    <td>${user.gender}</td>
+                    <td>${user.country}</td>
+                    <td>${user.imageUrl ? `<img src="${user.imageUrl}" width="50"/>` : ''}</td>
+                    <td><input type="checkbox" class="finalSubmit" data-index="${index}" ${user.finalSubmit ? 'checked' : ''}></td>
+                    <td>
+                        <button class="editBtn" data-index="${index}">Edit</button>
+                        <button class="deleteBtn" data-index="${index}">Delete</button>
+                    </td>
+                </tr>`;
+                    tbody.append(row);
+                });
+            }
+
+            // Edit row
+            $(document).on('click', '.editBtn', function () {
+                editIndex = $(this).data('index');
+                const user = users[editIndex];
+                $('#username').val(user.username);
+                $('#age').val(user.age);
+                $('input[name="gender"][value="' + user.gender + '"]').prop('checked', true);
+                $('#country').val(user.country);
+            });
+
+            // Delete row
+            $(document).on('click', '.deleteBtn', function () {
+                const index = $(this).data('index');
+                users.splice(index, 1);
+                renderTable();
+            });
+
+            // Checkbox → final submit
+            $(document).on('change', '.finalSubmit', function () {
+                const index = $(this).data('index');
+                users[index].finalSubmit = this.checked;
+                if (this.checked) {
+                    console.log("Final Submit Data:", users[index]);
+                    alert(`User "${users[index].username}" final submitted!`);
+                }
+            });
+        });
+    </script>
+
+</body>
+</html>
