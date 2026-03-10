@@ -1,0 +1,118 @@
+CREATE TABLE Users
+(
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    Username NVARCHAR(100) NOT NULL,
+    Age INT NOT NULL,
+    Gender NVARCHAR(10) NOT NULL,
+    Country NVARCHAR(50) NOT NULL,
+    ImagePath NVARCHAR(200),
+    FinalSubmit BIT NOT NULL
+);
+
+
+
+
+
+
+public class User
+{
+    public int Id { get; set; }
+    public string Username { get; set; }
+    public int Age { get; set; }
+    public string Gender { get; set; }
+    public string Country { get; set; }
+    public string ImagePath { get; set; }
+    public bool FinalSubmit { get; set; }
+}
+
+
+
+using System.Data.Entity; // For EF 6
+
+public class ApplicationDbContext : DbContext
+{
+    public ApplicationDbContext() : base("DefaultConnection") { }
+
+    public DbSet<User> Users { get; set; }
+}
+
+
+
+
+
+
+
+<connectionStrings>
+    <add name="DefaultConnection" connectionString="Data Source=YOUR_SERVER_NAME;Initial Catalog=YourDBName;Integrated Security=True" providerName="System.Data.SqlClient"/>
+</connectionStrings>
+
+
+
+
+
+using System.Linq;
+using System.Web.Mvc;
+
+public class UserController : Controller
+{
+    private ApplicationDbContext db = new ApplicationDbContext();
+
+    // GET: Show all users
+    public ActionResult Index()
+    {
+        var users = db.Users.ToList();
+        return View(users);
+    }
+
+    // POST: Save final submitted user from AJAX
+    [HttpPost]
+    public JsonResult SaveUser(User user)
+    {
+        if(user != null)
+        {
+            // Optional: save image to server
+            if(user.ImagePath != null)
+            {
+                // image saving logic if uploaded
+            }
+
+            db.Users.Add(user);
+            db.SaveChanges();
+            return Json(new { success = true, message = "User saved successfully!" });
+        }
+
+        return Json(new { success = false, message = "Error saving user." });
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+$(document).on('change', '.finalSubmit', function() {
+    const index = $(this).data('index');
+    users[index].finalSubmit = this.checked;
+
+    if(this.checked) {
+        // Send checked row to server
+        $.ajax({
+            url: '/User/SaveUser',
+            type: 'POST',
+            data: JSON.stringify(users[index]),
+            contentType: 'application/json',
+            success: function(res){
+                if(res.success){
+                    alert(`User "${users[index].username}" saved to database!`);
+                } else {
+                    alert("Error saving user!");
+                }
+            }
+        });
+    }
+});
